@@ -1,25 +1,21 @@
-# Chapitre 4 : Évaluation Sémantique (LLM-as-a-Judge) 🧠⚖️
+# Chapitre 5 : Sécurité, Robustesse et Guardrails 🛡️🔒
 
-Ce chapitre se concentre sur l'audit du **sens** des réponses générées par un système RAG, en allant au-delà de la simple validation de format pour garantir l'absence d'hallucinations.
+Ce chapitre traite de la protection des systèmes LLM contre les attaques malveillantes et les fuites de données, en passant d'une simple évaluation de la qualité à une véritable stratégie de **Défense en Profondeur**.
 
 ## 🎯 Intérêt de cette branche
 
-L'objectif de la branche `chapter-4` est de mettre en place une évaluation sémantique automatisée basée sur le paradigme **LLM-as-a-Judge** :
-1. **La Triade RAG** : Évaluer la qualité du système sur trois axes fondamentaux :
-    *   **Context Precision** : Le contexte récupéré est-il utile ?
-    *   **Faithfulness** : La réponse est-elle fidèle au contexte (anti-hallucination) ?
-    *   **Answer Relevance** : La réponse répond-elle directement à la question ?
-2. **Explicabilité** : Contrairement aux métriques mathématiques opaques, le Juge LLM fournit un **raisonnement textuel** pour justifier ses scores.
-3. **Résilience via LiteLLM** : Utilisation d'un proxy unifié pour garantir que la pipeline d'évaluation reste disponible même en cas de surcharge d'un fournisseur d'IA.
+L'objectif de la branche `chapter-5` est d'apprendre à sécuriser une application RAG face aux menaces du monde réel :
+1. **Red Teaming Automatisé** : Utiliser **Evidently AI** pour bombarder le système de prompts malveillants (Jailbreak, Injection) et mesurer son taux de succès/échec.
+2. **Blocage Actif via Guardrails** : Implémenter **Nvidia NeMo Guardrails** pour intercepter les attaques avant qu'elles n'atteignent le LLM.
+3. **Prévention des fuites (PII)** : S'assurer que le système ne divulgue pas d'informations sensibles (secrets, emails, tokens) présentes dans son contexte documentaire.
 
 ---
 
-## 🏗️ Architecture d'Évaluation
+## 🏗️ Architecture de Sécurité (Défense en Profondeur)
 
-Le système utilise un conteneur dédié (`evaluator`) qui :
-*   Simule un **Golden Dataset** (jeu de questions/réponses de référence).
-*   Interroge le Juge LLM (Llama 3 via Groq) à travers le proxy **LiteLLM**.
-*   Génère des rapports visuels détaillés avec **Evidently AI**.
+Le système combine deux approches complémentaires :
+*   **Audit Passif (Evidently AI)** : Agit comme un système d'alarme. Il évalue a posteriori (ou en CI/CD) si les défenses ont tenu bon.
+*   **Défense Active (NeMo Guardrails)** : Agit comme un vigile. Il utilise le langage **Colang** pour définir des règles de conduite et bloque les requêtes suspectes en temps réel.
 
 ---
 
@@ -28,13 +24,13 @@ Le système utilise un conteneur dédié (`evaluator`) qui :
 Assurez-vous d'avoir votre fichier `.env` configuré avec vos clés d'API (Groq, etc.).
 
 ### 1. Démarrer la stack RAGOPS
-Lancez les services de base (Backend, Meilisearch, Proxy, etc.) :
+Lancez les services de base (Backend avec NeMo intégré, Meilisearch, LiteLLM) :
 ```bash
 make up
 ```
 
-## 📁 Structure de l'Évaluation
+## 📁 Configuration de la Sécurité
 
-*   `src/eval/eval_rag.py` : Script principal configurant Evidently et le Juge LLM.
-*   `src/eval/check_semantic.py` : Le "Quality Gate" qui valide les scores finaux.
-*   `reports/` : Contient les rapports HTML (ex: `chapter4_semantic_report.html`) détaillant le raisonnement du Juge.
+*   `backend/app/nemo_config/` : Contient la "loi" du système (`rails.co`) et la configuration du modèle régulateur (`config.yaml`).
+*   `src/red_teaming.py` : Le script qui définit les vecteurs d'attaque.
+*   `src/check_security.py` : Le garde-fou final qui décide si le build doit échouer en cas de vulnérabilité.

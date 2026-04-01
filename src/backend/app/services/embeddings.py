@@ -37,19 +37,29 @@ async def generate_embeddings(texts: List[str]) -> List[List[float]]:
             uncached.append(t)
             idxs.append(i)
 
-    # 2) remote call if needed
+    # 2) remote call if needed with batching (TEI/LiteLLM has a max batch size, e.g., 32)
+    BATCH_SIZE = 32
     if uncached:
-        data = await _request_embeddings(uncached)
-        if data is None:
-            # Fail closed: return only cached results
-            return [v for v in results if v is not None]
+        import asyncio
+        for i in range(0, len(uncached), BATCH_SIZE):
+            batch = uncached[i : i + BATCH_SIZE]
+            batch_idxs = idxs[i : i + BATCH_SIZE]
+            
+            data = await _request_embeddings(batch)
+            if data is None:
+                logger.error(f"Batch {i//BATCH_SIZE + 1} failed. Skipping remaining batches.")
+                break
 
-        for i, emb in zip(idxs, data):
-            vec = emb.get("embedding", emb)
-            if isinstance(vec, dict) and "default" in vec:
-                vec = vec["default"]
-            results[i] = vec
-            set_json(f"embedding:{md5_hash(texts[i])}", vec, _CACHE_TTL)
+            for idx, emb in zip(batch_idxs, data):
+                vec = emb.get("embedding", emb)
+                if isinstance(vec, dict) and "default" in vec:
+                    vec = vec["default"]
+                results[idx] = vec
+                set_json(f"embedding:{md5_hash(texts[idx])}", vec, _CACHE_TTL)
+            
+            # Avoid hammering TEI too hard
+            if i + BATCH_SIZE < len(uncached):
+                await asyncio.sleep(0.1)
 
     # 3) flatten and filter
     return [v for v in results if v is not None]
