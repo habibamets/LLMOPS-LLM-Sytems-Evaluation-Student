@@ -1,38 +1,33 @@
-# Chapitre 1 : Fondamentaux de l'Évaluation LLM et Architecture Production-Ready 🚀🏗️
+# Chapitre 2 : Profiling Avancé et Détection de Dérive (Data Drift) 📉⚠️
 
-Ce chapitre pose les bases de l'évaluation automatisée pour les systèmes LLM, en passant d'une observation anecdotique à une télémétrie structurée et actionable.
+Ce chapitre se concentre sur l'analyse comparative des flux de données pour détecter les changements de comportement des utilisateurs et les risques de sécurité avant qu'ils ne dégradent les performances du LLM.
 
 ## 🎯 Intérêt de cette branche
 
-L'objectif de la branche `chapter-1` est de mettre en place une infrastructure de test robuste :
-1. **Gestion du Non-Déterminisme** : Transformer des sorties textuelles variables en signaux numériques stables.
-2. **Architecture Séparée** : 
-    *   **L'Évaluateur** (`app.py`) : Calcule les métriques et génère les rapports.
-    *   **Le Gatekeeper** (`check_limits.py`) : Prend la décision binaire (Pass/Fail) pour la CI/CD.
-3. **Métriques de Base (Smoke Tests)** :
-    *   **TextLength** (Longueur) : Détecter les réponses tronquées ou les bugs d'API.
-    *   **OOV (Out of Vocabulary)** : Mesurer l'hallucination via le jargon inventé.
-    *   **Sentiment** : Surveiller le ton de l'assistant.
-    *   **RegExp** : Détecter les refus explicites du modèle ("I don't know", etc.).
+L'objectif de la branche `chapter-2` est de mettre en place un monitoring de la **dérive (Drift)** :
+1. **Analyse Comparative** : Comparer les données actuelles (**Current**) à une base de référence saine (**Reference**) pour identifier les changements statistiques.
+2. **Détection d'Anomalies** : Identifier les dérives de sentiment (agressivité croissante), de longueur de prompt (complexité) ou de langue.
+3. **Sécurité Déterministe** : Détecter les fuites de données personnelles (**PII**) comme les emails via des descripteurs RegExp.
+4. **Stability Gate** : Automatiser la décision de blocage (CI/CD) si la dérive dépasse les seuils de tolérance.
 
 ---
 
-## 🏗️ Architecture "Production-Ready"
+## 🏗️ Architecture d'Analyse de Dérive
 
-Le système est orchestré via Docker pour garantir la reproductibilité :
-*   **Conteneur Evaluator** : Isole les dépendances (uv, pandas, evidently, nltk).
-*   **Volume mapping** : Le dossier `reports/` est partagé entre le conteneur et votre machine pour un accès instantané aux rapports HTML/JSON.
-
----
-
-## 📁 Structure de l'Évaluation
-
-*   `src/app.py` : Configuration des descripteurs Evidently et génération des snapshots.
-*   `src/check_limits.py` : Script de décision CI/CD (Quality Gate).
-*   `reports/` : Dossier contenant les rapports (HTML pour l'humain, JSON pour la machine).
+Le système utilise un conteneur unique (`evaluator`) qui :
+*   Charge deux jeux de données simulés (Semaine A vs Semaine B).
+*   Calcule des descripteurs sémantiques et statistiques (Sentiment, Longueur, Regex).
+*   Produit un diagnostic de dérive statistique avec **Evidently AI**.
 
 ---
 
-> [!NOTE]
-> En production, l'évaluation n'est pas une option, c'est le **téléscope** qui vous permet de voir ce qui se passe réellement dans la boîte noire de votre LLM.
+## 📁 Structure de l'Analyse
 
+*   `src/app.py` : Script principal configurant le `DataDriftPreset` et les descripteurs.
+*   `src/check_drift.py` : Le "Quality Gate" qui interprète les p-values et les rapports de dérive.
+*   `reports/` : Contient le rapport détaillé de dérive.
+
+---
+
+> [!IMPORTANT]
+> La dérive des entrées (**Input Drift**) est souvent un indicateur avancé d'un futur échec du modèle. Surveiller ce qui rentre permet d'anticiper les problèmes de qualité sur ce qui sort.
