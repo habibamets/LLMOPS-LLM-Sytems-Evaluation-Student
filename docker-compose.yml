@@ -1,0 +1,7 @@
+services:
+  evaluator:
+    build: .
+    volumes:
+      - .:/app
+    environment:
+      - PYTHONUNBUFFERED=1
