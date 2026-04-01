@@ -25,31 +25,6 @@ Le système est orchestré via Docker pour garantir la reproductibilité :
 
 ---
 
-## 🚀 Lancement et Utilisation
-
-### 1. Démarrer le pipeline complet
-Cette commande verrouille les dépendances, construit l'image Docker et lance l'évaluation suivie du Smoke Test :
-```bash
-make run
-```
-
-**Ce que fait cette commande :**
-1. Elle exécute `src/app.py` qui analyse un échantillon de logs simulés.
-2. Elle génère un rapport HTML interactif et un fichier JSON programmable dans `reports/`.
-3. Elle exécute `src/check_limits.py` qui lit le JSON et valide les seuils de qualité (ex: OOV < 20%).
-
----
-
-## 🛠️ Commandes utiles
-
-| Commande | Action |
-| :--- | :--- |
-| `make run` | Construit et lance tout le cycle (Évaluation + Gatekeeping) |
-| `docker compose down` | Arrête le conteneur et nettoie les ressources |
-| `ls reports/` | Vérifie la présence des artefacts générés |
-
----
-
 ## 📁 Structure de l'Évaluation
 
 *   `src/app.py` : Configuration des descripteurs Evidently et génération des snapshots.
@@ -61,5 +36,3 @@ make run
 > [!NOTE]
 > En production, l'évaluation n'est pas une option, c'est le **téléscope** qui vous permet de voir ce qui se passe réellement dans la boîte noire de votre LLM.
 
----
-*Basé sur le support de cours : [cours.md](./cours.md)*
