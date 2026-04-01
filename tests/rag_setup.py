@@ -9,9 +9,9 @@ def extract_text_from_pdf(pdf_path):
         sys.exit(1)
         
     text = ""
-    with pypdf.PdfReader(pdf_path) as pdf:
-        for page in pdf.pages:
-            text += page.extract_text()
+    reader = pypdf.PdfReader(pdf_path)
+    for page in reader.pages:
+        text += page.extract_text()
     
     return text.strip()
 
@@ -34,7 +34,7 @@ def ingest_to_rag(file_path):
         sys.exit(1)
         
     # On découpe le texte pour éviter d'envoyer un document géant à l'API d'ingestion
-    chunks = chunk_text(full_text)[:32]  # On limite à 32 chunks pour l'évaluation
+    chunks = chunk_text(full_text)[:32]
     print(f"{len(chunks)} fragments générés. Envoi au backend...")
     
     documents = []
@@ -46,8 +46,9 @@ def ingest_to_rag(file_path):
             "metadata": {"source": base_name, "chunk": i}
         })
     
-    # Appel de l'API RAGOPS tournant dans le réseau Docker
-    url = "http://backend:8000/ingest"
+    # Appel de l'API RAGOPS
+    backend_url = "http://localhost:18000"
+    url = f"{backend_url}/ingest"
     try:
         response = requests.post(url, json=documents, timeout=60)
         if response.status_code == 200:
@@ -60,8 +61,8 @@ def ingest_to_rag(file_path):
         sys.exit(1)
 
 if __name__ == "__main__":
-    # Le chemin correspond au montage fait dans docker-compose.yml
-    DATA_FILE = "/app/data/linear_algebra.pdf"
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    DATA_FILE = os.path.join(project_root, "data", "linear_algebra.pdf")
     print("="*50)
     print("PREPARATION DU RAG POUR L'EVALUATION")
     print("="*50)

@@ -1,0 +1,8 @@
+.git
+.venv
+reports
+tei_model_cache
+redis_data
+meili_data
+__pycache__
+*.pyc

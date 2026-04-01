@@ -1,0 +1,7 @@
+models:
+  - type: main
+    engine: openai
+    model: groq-llama3 # Le nom de notre modèle tel que défini dans LiteLLM proxy
+  - type: embeddings
+    engine: openai
+    model: local-embeddings

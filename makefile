@@ -24,13 +24,17 @@ logs:
 	@echo "📄 Showing service logs..."
 	docker-compose logs -f backend
 
-build-eval:
-	cd src/eval && uv lock && cd ../.. && docker compose build evaluator
-
-run-eval:
-	docker compose --profile manual up evaluator
-
 links:
 	@echo "   Meilisearch: http://localhost:7700"
 	@echo "   Backend: http://localhost:18000"
 	@echo "   Health:  http://localhost:18000/health"
+
+run-tests:
+	docker compose down
+	docker build -t ragops-tester -f tests/Dockerfile.test .
+	docker run --rm -e PYTHONUNBUFFERED=1 --env-file .env \
+		-v /var/run/docker.sock:/var/run/docker.sock \
+		-v $(PWD):$(PWD) \
+		-w $(PWD) \
+		-v $(PWD)/reports:/app/reports \
+		--network host ragops-tester

@@ -1,0 +1,12 @@
+[
+    {
+        "question": "What is a Matrix ?",
+        "expected_context": "Matrices: A matrix is a 2-D array of numbers, so each element is identified by two indices instead of just one. We usually give matrices uppercase variable names with bold type face,such as A. If a real-valued matrix A has a height of m and a width of n, then we say that A∈Rm n×.",
+        "expected_answer": "A matrix is a 2-D array of numbers, so each element is identified by two indices instead of just one. We usually give matrices uppercase variable names with bold type face,such as A. If a real-valued matrix A has a height of m and a width of n, then we say that A∈Rm n×."
+    },
+    {
+        "question": "Is Linear Algebra important for Deep Learning ?",
+        "expected_context": "Linear algebra is one of the fundamental mathematical disciplines necessary to understanding deep learning. Another key area of mathematics that is ubiquitous in machine learning is probability theory, presented next.",
+        "expected_answer": "Yes, Linear algebra is one of the fundamental mathematical disciplines necessary to understanding deep learning. Another key area of mathematics that is ubiquitous in machine learning is probability theory, presented next."
+    }
+]

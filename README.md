@@ -1,21 +1,24 @@
-# Chapitre 5 : Sécurité, Robustesse et Guardrails 🛡️🔒
+# Chapitre 6 : Intégration Continue (CI/CD) et Tests E2E 🛡️
 
-Ce chapitre traite de la protection des systèmes LLM contre les attaques malveillantes et les fuites de données, en passant d'une simple évaluation de la qualité à une véritable stratégie de **Défense en Profondeur**.
+Ce chapitre se concentre sur l'automatisation de la qualité et de la sécurité via des pipelines de test robustes, garantissant qu'aucune régression (sémantique ou sécuritaire) n'atteigne la production.
 
 ## 🎯 Intérêt de cette branche
 
-L'objectif de la branche `chapter-5` est d'apprendre à sécuriser une application RAG face aux menaces du monde réel :
-1. **Red Teaming Automatisé** : Utiliser **Evidently AI** pour bombarder le système de prompts malveillants (Jailbreak, Injection) et mesurer son taux de succès/échec.
-2. **Blocage Actif via Guardrails** : Implémenter **Nvidia NeMo Guardrails** pour intercepter les attaques avant qu'elles n'atteignent le LLM.
-3. **Prévention des fuites (PII)** : S'assurer que le système ne divulgue pas d'informations sensibles (secrets, emails, tokens) présentes dans son contexte documentaire.
+L'objectif de la branche `chapter-6` est de transformer nos scripts d'audit manuels en un **Quality Gate** automatique. 
+
+Grâce à **Testcontainers**, nous créons un environnement éphémère identique à la production pour chaque exécution de test, permettant de valider :
+1. **La Triade RAG** : Fidélité (*Faithfulness*), Pertinence du contexte (*Context Precision*) et du contenu (*Answer Relevance*).
+2. **La Résilience Sécuritaire** : Red Teaming automatique pour détecter les fuites de secrets et les contournements de Guardrails.
+3. **L'Intégrité de l'Architecture** : Vérification que tous les composants (Backend, Meilisearch, Proxy, TEI) collaborent correctement.
 
 ---
 
-## 🏗️ Architecture de Sécurité (Défense en Profondeur)
+## 🏗️ Architecture des Tests (DooD)
 
-Le système combine deux approches complémentaires :
-*   **Audit Passif (Evidently AI)** : Agit comme un système d'alarme. Il évalue a posteriori (ou en CI/CD) si les défenses ont tenu bon.
-*   **Défense Active (NeMo Guardrails)** : Agit comme un vigile. Il utilise le langage **Colang** pour définir des règles de conduite et bloque les requêtes suspectes en temps réel.
+Le système utilise le pattern **DooD (Docker-out-of-Docker)** :
+*   Le conteneur de test (`ragops-tester`) accède au socket Docker de l'hôte (`/var/run/docker.sock`).
+*   Il pilote la création et la destruction de la stack complète via **Docker Compose** directement depuis le code Python.
+*   **Pytest** orchestre les scénarios de test et **Evidently AI** agit comme le juge (LLM-as-a-Judge) pour valider les réponses.
 
 ---
 
@@ -23,14 +26,15 @@ Le système combine deux approches complémentaires :
 
 Assurez-vous d'avoir votre fichier `.env` configuré avec vos clés d'API (Groq, etc.).
 
-### 1. Démarrer la stack RAGOPS
-Lancez les services de base (Backend avec NeMo intégré, Meilisearch, LiteLLM) :
+### 1. Préparer l'environnement
+Construisez les images de base de l'application :
 ```bash
-make up
+make build
 ```
+---
 
-## 📁 Configuration de la Sécurité
+## 📁 Structure des Tests
 
-*   `backend/app/nemo_config/` : Contient la "loi" du système (`rails.co`) et la configuration du modèle régulateur (`config.yaml`).
-*   `src/red_teaming.py` : Le script qui définit les vecteurs d'attaque.
-*   `src/check_security.py` : Le garde-fou final qui décide si le build doit échouer en cas de vulnérabilité.
+*   `tests/test_llm_e2e.py` : Le fichier maître contenant les fixtures Testcontainers et les scénarios Pytest.
+*   `tests/golden_dataset.json` : Le référentiel de "vérité terrain" (Ground Truth) utilisé pour l'évaluation.
+*   `tests/Dockerfile.test` : L'environnement isolé pour l'exécution des tests en CI.
