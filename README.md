@@ -1,61 +1,40 @@
-# Chapitre 3 : Évaluation Structurelle et Tests Déterministes 🏗️🔍
+# Chapitre 4 : Évaluation Sémantique (LLM-as-a-Judge) 🧠⚖️
 
-Ce chapitre traite de l'utilisation des LLMs en tant que composants logiciels fiables, en imposant une validation de structure (JSON, Schémas) pour garantir leur intégration dans des pipelines applicatifs.
+Ce chapitre se concentre sur l'audit du **sens** des réponses générées par un système RAG, en allant au-delà de la simple validation de format pour garantir l'absence d'hallucinations.
 
 ## 🎯 Intérêt de cette branche
 
-L'objectif de la branche `chapter-3` est de mettre en place une validation déterministe pour l'extraction d'entités :
-1. **Validation de Syntaxe** : S'assurer que le LLM produit un JSON valide (`IsValidJSON`).
-2. **Conformité au Schéma** : Vérifier que les clés attendues sont présentes et du bon type (`JSONSchemaMatch`).
-3. **Robustesse Logicielle** : Tester un modèle léger (**Gemma 3 270M via Ollama**) sujet au "bavardage" pour apprendre à construire des filets de sécurité (parsing robuste, retries).
+L'objectif de la branche `chapter-4` est de mettre en place une évaluation sémantique automatisée basée sur le paradigme **LLM-as-a-Judge** :
+1. **La Triade RAG** : Évaluer la qualité du système sur trois axes fondamentaux :
+    *   **Context Precision** : Le contexte récupéré est-il utile ?
+    *   **Faithfulness** : La réponse est-elle fidèle au contexte (anti-hallucination) ?
+    *   **Answer Relevance** : La réponse répond-elle directement à la question ?
+2. **Explicabilité** : Contrairement aux métriques mathématiques opaques, le Juge LLM fournit un **raisonnement textuel** pour justifier ses scores.
+3. **Résilience via LiteLLM** : Utilisation d'un proxy unifié pour garantir que la pipeline d'évaluation reste disponible même en cas de surcharge d'un fournisseur d'IA.
 
 ---
 
-## 🏗️ Architecture d'Évaluation Structurelle
+## 🏗️ Architecture d'Évaluation
 
-Le système repose sur deux services orchestrés par Docker Compose :
-*   **Ollama** : Héberge le modèle local `gemma3:270m` sur le port `11434`.
-*   **Evaluator** : Un conteneur Python qui interroge Ollama, extrait les données et génère des rapports de conformité avec **Evidently AI**.
+Le système utilise un conteneur dédié (`evaluator`) qui :
+*   Simule un **Golden Dataset** (jeu de questions/réponses de référence).
+*   Interroge le Juge LLM (Llama 3 via Groq) à travers le proxy **LiteLLM**.
+*   Génère des rapports visuels détaillés avec **Evidently AI**.
 
 ---
 
 ## 🚀 Lancement et Utilisation
 
-### 1. Démarrer l'environnement complet
-Cette commande verrouille les dépendances, construit les images et lance l'extraction suivie de l'audit :
+Assurez-vous d'avoir votre fichier `.env` configuré avec vos clés d'API (Groq, etc.).
+
+### 1. Démarrer la stack RAGOPS
+Lancez les services de base (Backend, Meilisearch, Proxy, etc.) :
 ```bash
-make run
+make up
 ```
-
-**Ce que fait cette commande :**
-1. Elle télécharge et lance Gemma 3 en local.
-2. Elle simule l'extraction de données depuis des factures brutes.
-3. Elle vérifie si la sortie est un JSON valide et si elle contient les champs `vendor` (string) et `total` (number).
-4. Elle génère un rapport HTML et JSON dans le dossier `reports/`.
-5. Elle exécute `check_structure.py` pour valider si le taux de succès technique est suffisant (ex: > 90%).
-
----
-
-## 🛠️ Commandes utiles
-
-| Commande | Action |
-| :--- | :--- |
-| `make run` | Construit et lance tout le cycle (Extraction + Audit) |
-| `docker compose down` | Arrête et nettoie tous les services |
-| `docker compose logs -f ollama` | Suit le chargement du modèle local |
-
----
 
 ## 📁 Structure de l'Évaluation
 
-*   `src/app.py` : Logique d'extraction via Ollama et configuration des descripteurs de structure.
-*   `src/check_structure.py` : Le "Quality Gate" technique qui valide les taux de succès syntaxiques et schématiques.
-*   `reports/` : Contient le rapport `chapter3_structural_report.html` détaillant chaque échec de format.
-
----
-
-> [!TIP]
-> En production, privilégiez toujours une validation déterministe par code (Regex, Pydantic) pour la structure. Réservez l'évaluation par LLM uniquement pour le sens et la nuance sémantique.
-
----
-*Basé sur le support de cours : [cours.md](./cours.md)*
+*   `src/eval/eval_rag.py` : Script principal configurant Evidently et le Juge LLM.
+*   `src/eval/check_semantic.py` : Le "Quality Gate" qui valide les scores finaux.
+*   `reports/` : Contient les rapports HTML (ex: `chapter4_semantic_report.html`) détaillant le raisonnement du Juge.

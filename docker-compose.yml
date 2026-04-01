@@ -1,7 +1,134 @@
 services:
   evaluator:
-    build: .
+    build: ./src/eval
     volumes:
-      - .:/app
+      - ./reports:/app/reports
     environment:
       - PYTHONUNBUFFERED=1
+      - PROXY_URL=${PROXY_URL}
+      - PROXY_KEY=${GROQ_API_KEY}
+
+  meilisearch:
+    image: getmeili/meilisearch:v1.16
+    ports:
+      - "7700:7700"
+    environment:
+      - MEILI_MASTER_KEY=${MEILI_KEY}
+    volumes:
+      - meili_data:/meili_data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7700/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  meili-init:
+    image: curlimages/curl:8.4.0
+    depends_on:
+      meilisearch:
+        condition: service_healthy
+    environment:
+      - MEILI_KEY=${MEILI_KEY}
+      - EMBED_DIM=${EMBED_DIM}
+    volumes:
+      - ./scripts/meili-init.sh:/meili-init.sh
+    command: ["/bin/sh", "/meili-init.sh"]
+    restart: "no"
+
+  tei-embeddings:
+    image: ghcr.io/huggingface/text-embeddings-inference:cpu-latest
+    platform: linux/amd64
+    environment:
+      - HF_HUB_ENABLE_HF_TRANSFER=1
+      - HUGGINGFACE_HUB_CACHE=/data
+      - HF_HOME=/data
+    volumes:
+      - tei_model_cache:/data
+    command: ["--model-id", "sentence-transformers/all-MiniLM-L6-v2", "--hostname", "0.0.0.0"]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  litellm:
+    image: ghcr.io/berriai/litellm:main-stable
+    environment:
+      - LITELLM_PROXY_MASTER_KEY=${PROXY_KEY}
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - LANGSMITH_API_KEY=${LANGSMITH_API_KEY}     
+      - LANGSMITH_PROJECT=${LANGSMITH_PROJECT:-ragops}
+      - LANGSMITH_BASE_URL=${LANGSMITH_BASE_URL}
+    volumes:
+      - ./deployments/litellm/config.yaml:/app/config.yaml
+    command: ["--config", "/app/config.yaml"]
+    depends_on:
+      - tei-embeddings
+      - redis
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--save", "60", "1", "--loglevel", "warning"]
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+
+  backend:
+    build: ./src/backend
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    environment:
+      - MEILI_URL=${MEILI_URL}
+      - MEILI_KEY=${MEILI_KEY}
+      - PROXY_URL=${PROXY_URL}
+      - PROXY_KEY=${PROXY_KEY}
+      - REDIS_URL=${REDIS_URL}
+      - LITELLM_MODEL=${LITELLM_MODEL}
+      - EMBEDDING_MODEL_NAME=${EMBEDDING_MODEL_NAME}
+    depends_on:
+      - meilisearch
+      - meili-init
+      - litellm
+      - tei-embeddings
+      - redis
+    restart: unless-stopped
+    ports:
+      - "18000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx,sys; sys.exit(0) if httpx.get('http://localhost:8000/health',timeout=5).status_code==200 else sys.exit(1)"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+
+  seed:
+    build: ./src/backend
+    command: ["python", "seed_data.py"]
+    environment:
+      - MEILI_URL=http://meilisearch:7700
+      - MEILI_KEY=${MEILI_KEY}
+      - PROXY_URL=http://litellm:4000
+      - PROXY_KEY=${LITELLM_KEY}
+    depends_on:
+      meilisearch:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+      litellm:
+        condition: service_started
+      tei-embeddings:
+        condition: service_started
+    restart: "on-failure"
+    profiles: ["manual"]
+
+volumes:
+  meili_data:
+  redis_data:
+  tei_model_cache:
