@@ -1,0 +1,14 @@
+FROM ghcr.io/astral-sh/uv:python3.12-trixie-slim
+
+RUN apt-get update && apt-get install -y docker.io curl && \
+    mkdir -p /usr/local/lib/docker/cli-plugins && \
+    curl -SL https://github.com/docker/compose/releases/download/v2.26.1/docker-compose-linux-x86_64 \
+         -o /usr/local/lib/docker/cli-plugins/docker-compose && \
+    chmod +x /usr/local/lib/docker/cli-plugins/docker-compose && \
+    rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+COPY . .
+RUN uv pip install --system ./tests
+
+CMD ["pytest", "-v", "-s", "--disable-warnings", "--tb=no", "tests/test_llm_e2e.py"]

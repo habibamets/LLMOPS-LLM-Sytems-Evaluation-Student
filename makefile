@@ -28,6 +28,7 @@ links:
 	@echo "   Meilisearch: http://localhost:7700"
 	@echo "   Backend: http://localhost:18000"
 	@echo "   Health:  http://localhost:18000/health"
+	@echo "   Evidently UI: http://localhost:8000"
 
 run-tests:
 	docker compose down
@@ -38,3 +39,12 @@ run-tests:
 		-w $(PWD) \
 		-v $(PWD)/reports:/app/reports \
 		--network host ragops-tester
+
+build-monitoring:
+	docker build -t monitoring-push -f src/dashboard/Dockerfile src/dashboard
+
+push-dashboard:
+	docker run --rm --network host --env-file .env monitoring-push
+
+monitor-rag:
+	docker run --rm --network host --env-file .env monitoring-push uv run python monitor_rag.py

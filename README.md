@@ -1,24 +1,23 @@
-# Chapitre 6 : Intégration Continue (CI/CD) et Tests E2E 🛡️
+# Chapitre 7 : Monitoring Long-Terme et Dashboarding 📊
 
-Ce chapitre se concentre sur l'automatisation de la qualité et de la sécurité via des pipelines de test robustes, garantissant qu'aucune régression (sémantique ou sécuritaire) n'atteigne la production.
+Ce chapitre marque la transition d'une approche de **Quality Gate** (validation ponctuelle en CI/CD) vers une **Observabilité Continue** de votre application RAG en production.
 
 ## 🎯 Intérêt de cette branche
 
-L'objectif de la branche `chapter-6` est de transformer nos scripts d'audit manuels en un **Quality Gate** automatique. 
-
-Grâce à **Testcontainers**, nous créons un environnement éphémère identique à la production pour chaque exécution de test, permettant de valider :
-1. **La Triade RAG** : Fidélité (*Faithfulness*), Pertinence du contexte (*Context Precision*) et du contenu (*Answer Relevance*).
-2. **La Résilience Sécuritaire** : Red Teaming automatique pour détecter les fuites de secrets et les contournements de Guardrails.
-3. **L'Intégrité de l'Architecture** : Vérification que tous les composants (Backend, Meilisearch, Proxy, TEI) collaborent correctement.
+L'objectif de la branche `chapter-7` est de mettre en place une infrastructure de monitoring capable de :
+1. **Détecter les dérives (drift)** : Suivre l'évolution de la qualité sémantique (*Faithfulness*) au fil du temps.
+2. **Surveiller la sécurité** : Visualiser les tentatives de fuites de données sensibles (*Secret Leaks*) et l'efficacité des Guardrails.
+3. **Centraliser les rapports** : Passer de fichiers JSON/HTML statiques à un tableau de bord dynamique et persistant avec **Evidently UI**.
 
 ---
 
-## 🏗️ Architecture des Tests (DooD)
+## 🏗️ Architecture du Monitoring
 
-Le système utilise le pattern **DooD (Docker-out-of-Docker)** :
-*   Le conteneur de test (`ragops-tester`) accède au socket Docker de l'hôte (`/var/run/docker.sock`).
-*   Il pilote la création et la destruction de la stack complète via **Docker Compose** directement depuis le code Python.
-*   **Pytest** orchestre les scénarios de test et **Evidently AI** agit comme le juge (LLM-as-a-Judge) pour valider les réponses.
+Le système repose sur quatre piliers :
+*   **Evidently UI** : Un service centralisé (Docker) qui héberge les dashboards et stocke les snapshots de données.
+*   **LiteLLM Proxy** : Utilisé comme passerelle pour interroger les juges LLM (Llama 3 via Groq) de manière sécurisée et optimisée.
+*   **`dashboard_push.py`** : Script d'initialisation qui déclare la structure du dashboard (code-as-config) et génère un historique simulé.
+*   **`monitor_rag.py`** : Script de production qui interroge réellement le RAG et pousse les métriques fraîches vers l'UI.
 
 ---
 
@@ -26,15 +25,11 @@ Le système utilise le pattern **DooD (Docker-out-of-Docker)** :
 
 Assurez-vous d'avoir votre fichier `.env` configuré avec vos clés d'API (Groq, etc.).
 
-### 1. Préparer l'environnement
-Construisez les images de base de l'application :
+### 1. Démarrer la stack RAGOPS
+Lancez les services de base (API, Vecteur DB, Proxy) :
 ```bash
-make build
+make up
 ```
----
 
-## 📁 Structure des Tests
-
-*   `tests/test_llm_e2e.py` : Le fichier maître contenant les fixtures Testcontainers et les scénarios Pytest.
-*   `tests/golden_dataset.json` : Le référentiel de "vérité terrain" (Ground Truth) utilisé pour l'évaluation.
-*   `tests/Dockerfile.test` : L'environnement isolé pour l'exécution des tests en CI.
+> [!TIP]
+> En production, le script `monitor_rag.py` est destiné à être exécuté via une tâche planifiée (Cron job) toutes les heures ou tous les jours pour assurer une surveillance sans interruption.
