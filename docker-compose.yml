@@ -4,4 +4,16 @@ services:
     volumes:
       - .:/app
     environment:
+      - OLLAMA_HOST=http://ollama:11434
+      - MODEL_NAME=${MODEL_NAME:-gemma3:270m}
       - PYTHONUNBUFFERED=1
+    depends_on:
+      - ollama
+
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    environment:
+      - MODEL_NAME=${MODEL_NAME:-gemma3:270m}
+    entrypoint: /bin/sh -c "ollama serve & sleep 5 && ollama pull $$MODEL_NAME && wait"
