@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  evidently_ui:
+    image: evidently/evidently-service:latest
+    ports:
+      - "8000:8000"
+    volumes:
+      - evidently_data:/app/workspace
+    command: ["--port", "8000", "--host", "0.0.0.0", "--workspace", "/app/workspace"]
+    restart: always
+
+volumes:
+  evidently_data:

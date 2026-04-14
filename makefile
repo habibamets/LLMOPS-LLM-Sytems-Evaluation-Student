@@ -41,10 +41,10 @@ run-tests:
 		--network host ragops-tester
 
 build-monitoring:
-	docker build -t monitoring-push -f src/dashboard/Dockerfile src/dashboard
+	docker compose build monitoring-push
 
 push-dashboard:
-	docker run --rm --network host --env-file .env monitoring-push
+	docker compose run --rm monitoring-push
 
 monitor-rag:
-	docker run --rm --network host --env-file .env monitoring-push uv run python monitor_rag.py
+	docker compose run --rm monitoring-push uv run python monitor_rag.py

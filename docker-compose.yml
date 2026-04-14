@@ -14,6 +14,8 @@ services:
       timeout: 10s
       retries: 3
 
+
+
   meili-init:
     image: curlimages/curl:8.4.0
     depends_on:
@@ -121,6 +123,17 @@ services:
       tei-embeddings:
         condition: service_started
     restart: "on-failure"
+    profiles: ["manual"]
+
+  monitoring-push:
+    build: ./src/dashboard
+    environment:
+      - PROXY_URL=http://litellm:4000
+      - PROXY_KEY=${PROXY_KEY}
+    depends_on:
+      litellm:
+        condition: service_healthy
+    restart: "no"
     profiles: ["manual"]
 
 volumes:
